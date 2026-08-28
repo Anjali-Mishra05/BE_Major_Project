@@ -1,3 +1,37 @@
-venv/
+# Python
 __pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Environments
+venv/
+.venv/
+env/
+
+# Jupyter
 .ipynb_checkpoints/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Run artefacts
+*.log
+reports/train_log.txt
+
+# Tracked deliberately, not ignored:
+#   models/          ~48 KB, the exact models behind the reported metrics
+#   reports/         Phase I deliverables (results, metrics, figures)
+#   data/samples/    4 KB demo fixture, regenerated deterministically (seed 42)
+#
+# data/processed/ is 67 MB and regenerable from data/raw/ via
+# notebooks/01_preprocessing.ipynb. Uncomment to stop tracking new changes to it;
+# note this does NOT untrack what is already committed, and the existing blobs
+# stay in history until it is rewritten.
+# data/processed/

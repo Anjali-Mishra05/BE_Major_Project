@@ -1,0 +1,6 @@
+# Phase I baseline. Versions are the ones the reported results were produced with.
+lightgbm==4.7.0
+scikit-learn==1.5.1
+pandas==2.2.2
+numpy==1.26.4
+matplotlib==3.9.2

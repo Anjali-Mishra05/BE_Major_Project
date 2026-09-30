@@ -9,8 +9,8 @@ fraud_flag column so evaluation.py can report whether each call was right.
     python src/make_test_samples.py --n 20 --fraud 5   # control the fraud/legit mix
     python src/make_test_samples.py --out data/samples/panel_demo.csv
 
-NOTE ON THE MIX. The dataset is 0.192% fraud, so 20 rows drawn at random would almost
-certainly contain none. --fraud oversamples the fraud class so a demo can show both
+NOTE ON THE MIX. Fraud is a minority class, so 20 rows drawn at random may contain few or
+none. --fraud oversamples the fraud class so a demo can show both
 outcomes. That makes the file useful for demonstration but NOT a valid sample for
 measuring performance - quote metrics from the full test set instead.
 """

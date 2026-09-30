@@ -26,10 +26,14 @@ MODELS_DIR = ROOT / "models"
 REPORTS_DIR = ROOT / "reports"
 FIGURES_DIR = REPORTS_DIR / "figures"
 
-DATASET = PROCESSED_DIR / "upi_transactions_ml_ready.csv"
+DATASET = PROCESSED_DIR / "upi_transactions_ml_ready_final.csv"
 DEFAULT_SAMPLES = SAMPLES_DIR / "demo_test_samples.csv"
 
 LABEL_COLUMN = "fraud_flag"
+ID_COLUMN = "transaction id"
+# `behaviour_*` is generated together with fraud_flag (e.g. every Device/Network Anomaly
+# row is fraud) and would not exist at scoring time, so it is excluded as label leakage.
+LEAKY_PREFIXES = ("behaviour_",)
 TIME_COLUMN = "timestamp"
 
 SEED = 42

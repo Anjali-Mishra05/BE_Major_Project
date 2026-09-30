@@ -41,7 +41,7 @@ EARLY_STOPPING = 50
 
 
 def train(Xtr, ytr, Xva, yva, verbose: bool = True) -> lgb.Booster:
-    """Fit the baseline. scale_pos_weight compensates for the 0.192% fraud rate."""
+    """Fit the baseline. scale_pos_weight compensates for the class imbalance."""
     params = dict(PARAMS)
     params["scale_pos_weight"] = float((ytr == 0).sum() / max((ytr == 1).sum(), 1))
     dtr = lgb.Dataset(Xtr, label=ytr)

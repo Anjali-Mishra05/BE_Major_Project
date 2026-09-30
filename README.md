@@ -8,21 +8,22 @@ fraud detection model using accuracy, precision, recall, F1-score and AUC-ROC.
 
 ## Result
 
-The LightGBM baseline scores **at chance**, and scores exactly what the same model scores
-after its training labels are randomly shuffled:
+Trained on `data/processed/upi_transactions_ml_ready_final.csv` (332,693 transactions,
+25.0 % fraud, synthetic fraud added), 71 features:
 
-| Split | ROC-AUC (real labels) | ROC-AUC (permuted labels, 5 runs) |
-|---|---|---|
-| Stratified | 0.5068 | 0.5068 ± 0.0192 |
-| Chronological | 0.4929 | 0.4907 ± 0.0240 |
+| Split | ROC-AUC | PR-AUC | Recall (tuned) | Precision (tuned) | ROC-AUC, permuted labels |
+|---|---|---|---|---|---|
+| Stratified | 0.9115 | 0.8577 | 0.698 | 0.846 | 0.555 ± 0.065 |
+| Chronological | 0.9105 | 0.8557 | 0.711 | 0.822 | 0.540 ± 0.065 |
 
-The dataset's `fraud_flag` carries no learnable relationship to its features. This is a
-property of the data, not of the pipeline. Full write-up and the statistical pre-check
-that corroborates it: [`reports/baseline_results.md`](reports/baseline_results.md).
+> **Leakage excluded.** The dataset's `behaviour` column is generated with the label
+> (every "Device Anomaly" and "Network Anomaly" row is fraud), so it is dropped before
+> training. Including it gives ROC-AUC 0.99. The fraud is still synthetic, so these
+> numbers do not predict real-world performance. Details:
+> [`reports/baseline_results.md`](reports/baseline_results.md).
 
-> **Reporting accuracy.** A majority-class dummy — labelling every transaction legitimate
-> — reaches 99.81% accuracy and catches zero fraud. At 0.192% prevalence, always quote
-> accuracy alongside that dummy, and lead with PR-AUC, recall and false-positive rate.
+> **Reporting accuracy.** A majority-class dummy reaches 75 % accuracy and catches zero
+> fraud. Always quote accuracy alongside it.
 
 ## Setup
 
@@ -33,7 +34,7 @@ pip install -r requirements.txt
 ## Usage
 
 ```bash
-# 1. Train the baseline (~80 s). Writes models/, reports/baseline_metrics.json, figures.
+# 1. Train the baseline (~1 min). Writes models/, reports/baseline_metrics.json, figures.
 python src/train_baseline.py
 
 # 2. Evaluate. Loads the saved model, retrains nothing, runs in seconds.
@@ -56,7 +57,7 @@ a slide. `--html` writes `reports/evaluation_report.html` as the projectable lea
 ```
 data/
   raw/          upi_transactions_2024.csv          source dataset
-  processed/    upi_transactions_ml_ready.csv      one-hot encoded, model-ready
+  processed/    upi_transactions_ml_ready_final.csv  one-hot encoded, model-ready
   samples/      demo_test_samples.csv              unseen transactions for demos
 notebooks/
   01_preprocessing.ipynb                           raw -> processed

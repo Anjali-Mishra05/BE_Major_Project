@@ -171,16 +171,16 @@ def main() -> None:
     print(f"  Majority-class dummy   accuracy {dummy['accuracy']:.4f}   "
           f"recall {dummy['recall']:.4f}   fraud caught 0")
     print("    A model that labels every transaction legitimate. It needs no features")
-    print("    and no training, and it beats the trained model on accuracy.")
+    print("    and no training, and it catches no fraud at all.")
     print()
     print(f"  Random scorer          ROC-AUC 0.5000   PR-AUC "
           f"{yte.mean():.4f} (= fraud prevalence)")
     print()
-    print("  HOW TO READ THIS. At 0.19% fraud, accuracy is not a useful metric - the")
-    print("  dummy above proves it. The metrics that matter are ROC-AUC, PR-AUC and")
-    print("  recall. The trained model lands at the random-scorer values on all three,")
-    print("  which is the documented Phase I finding: this dataset's fraud_flag carries")
-    print("  no learnable relationship to its features. See reports/baseline_results.md.")
+    print(f"  HOW TO READ THIS. At {yte.mean() * 100:.1f}% fraud the dummy already reaches "
+          f"{dummy['accuracy'] * 100:.1f}% accuracy,")
+    print("  so accuracy alone says little. Compare ROC-AUC, PR-AUC and recall against")
+    print("  the dummy and random scorer above. The label-correlated `behaviour` column")
+    print("  is excluded from training (see reports/baseline_results.md).")
     ctx["dummy"] = dummy
     ctx["prevalence"] = float(yte.mean())
 

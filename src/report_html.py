@@ -229,9 +229,9 @@ threshold-independent &mdash; they measure ranking quality across all thresholds
 <p>At {d['rate'] * 100:.2f}% fraud, accuracy is not a useful metric. The majority-class dummy
 &mdash; which labels every transaction legitimate and needs no training &mdash; reaches
 <strong>{dummy['accuracy'] * 100:.2f}% accuracy</strong> while catching zero fraud. The metrics
-that matter are ROC-AUC, PR-AUC and recall, and the trained model lands at the random-scorer
-values on all three. This is the documented Phase I finding: the dataset's
-<code>fraud_flag</code> carries no learnable relationship to its features.</p></div></section>
+that matter are ROC-AUC, PR-AUC and recall, compared against the dummy and random scorer above.
+The label-correlated <code>behaviour</code> column is excluded from training; see
+<code>reports/baseline_results.md</code>.</p></div></section>
 
 <section><p class="kicker">4 &middot; Errors</p><h2>Confusion matrix</h2>
 <div class="cms">{_confusion(m)}</div></section>

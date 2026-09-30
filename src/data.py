@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-from config import DATASET, LABEL_COLUMN, SEED, TIME_COLUMN
+from config import DATASET, ID_COLUMN, LABEL_COLUMN, LEAKY_PREFIXES, SEED, TIME_COLUMN
 
 
 def load_data(path: Path = DATASET) -> tuple[pd.DataFrame, pd.Series, pd.Series]:
@@ -21,12 +21,14 @@ def load_data(path: Path = DATASET) -> tuple[pd.DataFrame, pd.Series, pd.Series]
     df = pd.read_csv(path, parse_dates=[TIME_COLUMN])
     ts = df.pop(TIME_COLUMN)
     y = df.pop(LABEL_COLUMN)
+    leaky = [c for c in df.columns if c.startswith(LEAKY_PREFIXES)]
+    df = df.drop(columns=[ID_COLUMN, *leaky], errors="ignore")   # identifier + label leakage
     return df, y, ts
 
 
 def stratified_split(X, y, ts):
     """70 / 15 / 15 stratified random split - keeps the fraud rate identical in every
-    partition, which matters when the positive class has only 480 rows."""
+    partition, which matters when the positive class has few rows."""
     idx = np.arange(len(y))
     tr, tmp = train_test_split(idx, test_size=0.30, stratify=y, random_state=SEED)
     va, te = train_test_split(tmp, test_size=0.50, stratify=y.iloc[tmp], random_state=SEED)
@@ -47,15 +49,15 @@ def get_splitter(split: str):
 
 # ------------------------------------------------------------------------- decoding
 
-# Preprocessing used pd.get_dummies(drop_first=True), so each group is missing its
-# first category - an all-zero group means that dropped reference value.
+# Preprocessing one-hot encoded every category (no reference level dropped), so each
+# group always has exactly one active column.
 ONEHOT_GROUPS = [
-    ("Type", "transaction type_", "P2M"),
-    ("Merchant", "merchant_category_", "Bills"),
-    ("Device", "device_type_", "Android"),
-    ("Network", "network_type_", "3G"),
-    ("Sender bank", "sender_bank_", "Axis"),
-    ("Sender state", "sender_state_", "Andhra Pradesh"),
+    ("Type", "transaction type_"),
+    ("Merchant", "merchant_category_"),
+    ("Device", "device_type_"),
+    ("Network", "network_type_"),
+    ("Sender bank", "sender_bank_"),
+    ("Sender state", "sender_state_"),
 ]
 BINARY_FLAGS = ("is_weekend", "is_night_transaction", "is_high_amount")
 
@@ -64,9 +66,9 @@ def decode(row, columns) -> dict:
     """Turn one one-hot encoded row back into readable attributes for display."""
     out = {"Amount": f"Rs {row['amount (INR)']:,.0f}",
            "Hour": f"{int(row['hour_of_day']):02d}:00"}
-    for label, prefix, reference in ONEHOT_GROUPS:
+    for label, prefix in ONEHOT_GROUPS:
         hot = [c for c in columns if c.startswith(prefix) and row[c] == 1]
-        out[label] = hot[0][len(prefix):] if hot else f"{reference} (ref)"
+        out[label] = hot[0][len(prefix):] if hot else "unknown"
     flags = [f for f in BINARY_FLAGS if row[f] == 1]
     out["Flags"] = ", ".join(f.replace("is_", "").replace("_", " ") for f in flags) or "none"
     return out

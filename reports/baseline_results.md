@@ -10,91 +10,91 @@ Run: `python src/train_baseline.py` · Artifacts: `reports/baseline_metrics.json
 
 ## Headline finding
 
-Both baselines score at chance level, and **the model trained on the real labels performs
-identically to the same model trained on randomly shuffled labels**. The prepared dataset
-contains no learnable relationship between the 60 features and `fraud_flag`.
+On the updated dataset (synthetic fraud added, 25 % prevalence) the LightGBM baseline,
+trained **without** the label-correlated `behaviour` column, ranks fraud well above chance
+and clearly beats the shuffled-label control.
 
-| Split | ROC-AUC (real labels) | ROC-AUC (permuted labels, 5 runs) |
+| Split | ROC-AUC | PR-AUC | ROC-AUC, permuted labels (5 runs) |
+|---|---|---|---|
+| Stratified | 0.9115 | 0.8577 | 0.555 ± 0.065 |
+| Chronological | 0.9105 | 0.8557 | 0.540 ± 0.065 |
+
+**Why `behaviour` is excluded.** The dataset contains a `behaviour` column (one-hot
+encoded as `behaviour_*`) generated together with `fraud_flag`:
+
+| behaviour | legit | fraud |
 |---|---|---|
-| Stratified | 0.5068 | 0.5068 ± 0.0192 |
-| Chronological | 0.4929 | 0.4907 ± 0.0240 |
+| Device Anomaly | 0 | 12,537 |
+| Network Anomaly | 0 | 12,352 |
+| Normal | 220,540 | 411 |
+| Unusual Time + High Amount | 882 | 21,767 |
+| High Amount | 11,575 | 22,117 |
+| Unusual Time | 16,523 | 13,989 |
 
-The permuted-label control is the decisive test: it destroys any real signal by shuffling
-the training labels. A model with genuine predictive power scores well above its permuted
-control. Here the two are indistinguishable.
+It was the top feature by gain (about 14x the next one) and would not exist at scoring
+time, so it is dropped in `load_data` (`LEAKY_PREFIXES` in `src/config.py`). Including it
+gave ROC-AUC 0.9913 / PR-AUC 0.9802 (stratified), which reflects the generator's rule, not
+detection ability. The remaining fraud is still synthetic, so 0.91 shows the model
+recovers the generator's feature-level patterns (amount, hour, night/high-amount flags),
+not real-world performance.
 
 ## Dataset
 
 | Property | Value |
 |---|---|
-| Transactions | 250,000 |
-| Features | 60 (after one-hot encoding, `timestamp` excluded) |
-| Fraud cases | 480 (**0.192 %**) |
-| Date range | 2024-01-01 → 2024-12-30 |
-| Missing values | 0 |
+| Transactions | 332,693 |
+| Features | 71 (after one-hot encoding; `timestamp`, `transaction id` and `behaviour_*` excluded) |
+| Fraud cases | 83,173 (**25.0 %**) |
+| Date range | 2024-01-01 -> 2024-12-30 |
+| Source file | `data/processed/upi_transactions_ml_ready_final.csv` |
 
 ## Model
 
 | | LightGBM |
 |---|---|
-| Architecture | 15 leaves, depth 5, ≤600 rounds w/ early stopping |
-| Size | 21 trees (42 KB) |
-| Imbalance handling | `scale_pos_weight` = 520 |
-| Inference | 1.2–3.0 µs/txn |
+| Architecture | 15 leaves, depth 5, <=600 rounds w/ early stopping |
+| Size | 186 trees (stratified), 206 trees (chronological) |
+| Imbalance handling | `scale_pos_weight` = train legit / train fraud (about 3) |
+| Inference | about 8.5 us/txn |
 
-Well inside the Raspberry Pi / Jetson Nano budget of report §5.8.
-
-The compact MLP evaluated in the first pass was removed — LightGBM is the model going
-forward. Note for Phase II: FedAvg/FedProx and per-example gradient clipping need a
-differentiable model, so federating a GBDT requires a different algorithm family
-(SecureBoost, FedTree) than report §5.3 currently specifies.
+Note for Phase II: FedAvg/FedProx and per-example gradient clipping need a differentiable
+model, so federating a GBDT requires a different algorithm family (SecureBoost, FedTree)
+than report section 5.3 currently specifies.
 
 ## Full metrics
 
-**Stratified split** — test n = 37,500 (72 fraud)
+Test n = 49,904 for both splits.
+
+**Stratified split** - 12,476 fraud in test
 
 | Model | Threshold | Accuracy | Precision | Recall | F1 | ROC-AUC | PR-AUC | FPR |
 |---|---|---|---|---|---|---|---|---|
-| LightGBM | 0.50 | 0.8016 | 0.0023 | 0.2361 | 0.0045 | 0.5068 | 0.0019 | 0.1973 |
-| LightGBM | tuned | 0.9196 | 0.0010 | 0.0417 | 0.0020 | 0.5068 | 0.0019 | 0.0787 |
-| Majority-class dummy | — | **0.9981** | 0.0000 | 0.0000 | 0.0000 | 0.5000 | — | 0.0000 |
+| LightGBM | 0.50 | 0.8625 | 0.6978 | 0.7937 | 0.7426 | 0.9115 | 0.8577 | 0.1146 |
+| LightGBM | tuned (0.691) | 0.8926 | 0.8457 | 0.6975 | 0.7645 | 0.9115 | 0.8577 | 0.0424 |
+| Majority-class dummy | - | 0.7500 | 0.0000 | 0.0000 | 0.0000 | 0.5000 | 0.2500 | 0.0000 |
 
-**Chronological split** — test n = 37,500 (67 fraud)
+**Chronological split** - 12,459 fraud in test
 
 | Model | Threshold | Accuracy | Precision | Recall | F1 | ROC-AUC | PR-AUC | FPR |
 |---|---|---|---|---|---|---|---|---|
-| LightGBM | 0.50 | 0.0564 | 0.0018 | 0.9403 | 0.0035 | 0.4929 | 0.0018 | 0.9452 |
-| LightGBM | tuned | 0.9465 | 0.0026 | 0.0746 | 0.0050 | 0.4929 | 0.0018 | 0.0519 |
-| Majority-class dummy | — | **0.9982** | 0.0000 | 0.0000 | 0.0000 | 0.5000 | — | 0.0000 |
+| LightGBM | 0.50 | 0.8610 | 0.6956 | 0.7882 | 0.7390 | 0.9105 | 0.8557 | 0.1148 |
+| LightGBM | tuned (0.659) | 0.8894 | 0.8220 | 0.7112 | 0.7626 | 0.9105 | 0.8557 | 0.0512 |
+| Majority-class dummy | - | 0.7503 | 0.0000 | 0.0000 | 0.0000 | 0.5000 | 0.2500 | 0.0000 |
 
 Thresholds marked *tuned* maximise fraud-class F1 on the validation split and are then
-applied unchanged to test.
+applied unchanged to test. The dummy reaches 75 % accuracy by labelling everything
+legitimate, so quote accuracy alongside it.
 
-**Read accuracy with care.** The majority-class dummy — a model that labels every
-transaction legitimate — reaches 99.81 % accuracy and catches zero fraud. At 0.19 %
-prevalence, accuracy is not a meaningful metric; PR-AUC, recall and FPR are.
+The permuted-label control is not exactly 0.5 (0.555 and 0.540, std about 0.065): at
+this size the shuffled-label runs stop early on very few trees and are noisy, but none
+approaches the real-label score (max 0.659).
 
-Both PR-AUC values sit at 0.0019, exactly the fraud prevalence, which is the value a random
-scorer achieves.
+## History
 
-## Statistical pre-check
-
-Run before training, and consistent with the results:
-
-- **χ² per binary feature:** 2 of 58 features reach p < 0.05, against 2.9 expected by
-  chance alone. None survives Bonferroni correction (α = 0.00086); the strongest,
-  `is_high_amount`, gives p = 0.0012.
-- **Transaction amount:** Mann-Whitney U, p = 0.99 — fraud and legitimate amount
-  distributions are indistinguishable (medians ₹618.5 vs ₹629).
-- **Hour of day:** two-sample KS, p = 0.61 — no temporal concentration of fraud.
-
-## Interpretation
-
-`fraud_flag` in this Kaggle-sourced synthetic dataset appears to have been assigned
-independently of the transaction attributes. This is a property of the data, not of the
-models or the preprocessing: no classifier can recover a relationship that was never
-encoded. Adding capacity, resampling (SMOTE), or further tuning cannot change this — they
-would only fit noise, and the permuted-label control would rise to meet them.
+The previous dataset (250,000 rows, 480 fraud, 0.192 %) gave chance-level scores
+(ROC-AUC 0.507 / 0.493), identical to permuted-label controls, and its statistical
+pre-check found no relationship between features and `fraud_flag`. The updated dataset
+adds synthetic fraud with feature-level patterns plus a leaky `behaviour` column (excluded).
 
 ## Reproducing and demonstrating
 
@@ -111,7 +111,7 @@ python src/evaluation.py --score-file data/samples/demo_test_samples.csv
 
 `make_test_samples.py` writes `data/samples/demo_test_samples.csv` — transactions drawn
 from the held-out test partition, so the model has genuinely never seen them. `--fraud`
-oversamples the fraud class (20 random rows would contain none at 0.192% prevalence), which
+oversamples the fraud class (a random 20 rows would rarely show both outcomes), which
 makes the file good for demonstration but **not** a valid sample for measuring performance;
 quote the full-test-set metrics above instead.
 
@@ -127,20 +127,10 @@ individual transactions with their fraud scores.
 
 ## Reporting this result
 
-The dataset stays as-is for Phase I. That makes the negative result itself the finding to
-report, and it is a defensible one — a chance-level baseline is only meaningful because it
-was verified against a permutation control and a statistical pre-check, both of which are
-included above.
+State explicitly in the Phase I write-up:
 
-Two things to state explicitly in the Phase I write-up:
-
-1. **The limitation is the data, not the method.** The pipeline, splits, imbalance
-   handling, threshold tuning and metrics are all sound and are what Phase II builds on.
-   No classifier can recover a relationship that was never encoded in the labels.
-2. **Accuracy must be reported alongside the majority-class dummy.** Quoting 99.81 %
-   accuracy without it would misrepresent the model, since the dummy reaches the same
-   number while catching zero fraud.
-
-If a dataset with verified fraud signal is approved later, `src/train_baseline.py` is
-dataset-agnostic: point `DATA` at the new CSV and set the label column. Splits, imbalance
-handling, threshold tuning, metrics, controls and figures carry over unchanged.
+1. **The fraud is synthetic.** The 25 % prevalence and its patterns come from the
+   generator, so the scores show the model recovers those rules, not real fraud.
+2. **`behaviour` was excluded as label leakage.** Including it gives 0.99 ROC-AUC; state
+   that the reported 0.91 is the leakage-free figure.
+3. **Accuracy must be quoted with the majority-class dummy** (75 %).

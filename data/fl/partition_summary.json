@@ -1,0 +1,58 @@
+{
+  "mode": "bank",
+  "seed": 42,
+  "n_clients": 3,
+  "dataset": "data\\processed\\upi_transactions_ml_ready_final.csv",
+  "split": "stratified (Phase I partition boundaries)",
+  "rows_total": 332693,
+  "rows_pooled_at_clients": 282789,
+  "server_test_file": "data\\fl\\server_test.csv",
+  "clients": [
+    {
+      "client": 0,
+      "file": "data\\fl\\client_0.csv",
+      "rows": 93606,
+      "fraud": 23500,
+      "fraud_rate": 0.251052,
+      "banks": [
+        "Kotak",
+        "SBI"
+      ]
+    },
+    {
+      "client": 1,
+      "file": "data\\fl\\client_1.csv",
+      "rows": 98765,
+      "fraud": 24612,
+      "fraud_rate": 0.249198,
+      "banks": [
+        "Axis",
+        "HDFC",
+        "Yes Bank"
+      ]
+    },
+    {
+      "client": 2,
+      "file": "data\\fl\\client_2.csv",
+      "rows": 90418,
+      "fraud": 22585,
+      "fraud_rate": 0.249784,
+      "banks": [
+        "ICICI",
+        "IndusInd",
+        "PNB"
+      ]
+    }
+  ],
+  "server_test": {
+    "rows": 49904,
+    "fraud": 12476,
+    "fraud_rate": 0.25
+  },
+  "bins": {
+    "amount_bins": 64,
+    "hour_bins": 24,
+    "total_bins": 226,
+    "schema_file": "fl\\upi_fl\\schema.json"
+  }
+}

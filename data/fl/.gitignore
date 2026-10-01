@@ -1,0 +1,4 @@
+# Client shards and the server-held test split are written here by fl/make_partitions.py.
+# They are ~65 MB of CSV reproducing the same rows as data/processed/, so they are not
+# tracked. partition_summary.json is tracked on purpose - it documents the partition.
+*.csv

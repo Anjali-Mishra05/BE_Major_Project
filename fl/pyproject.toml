@@ -1,0 +1,59 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "upi-fl"
+version = "0.1.0"
+description = "Federated learning for UPI fraud detection - Phase II, Objectives 4 and 5"
+requires-python = ">=3.10"
+# Kept unpinned for the same reason as requirements-fl.txt: the SuperNode environment may
+# already carry the Phase I versions and we must not force a downgrade.
+dependencies = [
+    "flwr>=1.39.0,<2.0.0",
+    "numpy",
+    "pandas",
+    "scikit-learn",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+
+[tool.flwr.app]
+publisher = "Anjali-Mishra05"
+fab-format-version = 1
+flwr-version-target = "1.39.0"
+
+[tool.flwr.app.components]
+serverapp = "upi_fl.server_app:app"
+clientapp = "upi_fl.client_app:app"
+
+# Every value below is read with context.run_config[...] and can be overridden per run with
+# `flwr run . local-simulation --run-config "key=value"`.
+[tool.flwr.app.config]
+# --- boosting budget -------------------------------------------------------------------
+# num-trees x max-depth = total server<->client exchanges, so these two together set the
+# run length and the communication overhead reported for Objective 5.
+num-trees = 120
+max-depth = 4
+
+# --- binning: fixed in advance, so no client data influences it ------------------------
+amount-bins = 64
+hour-bins = 24
+
+# --- tree growth, mirroring src/modeling.py PARAMS -------------------------------------
+learning-rate = 0.05
+lambda-l2 = 1.0
+min-child-samples = 50
+min-split-gain = 1e-6
+
+# --- server-side monitoring ------------------------------------------------------------
+eval-every-trees = 10
+server-test-path = "data/fl/server_test.csv"
+
+# --- aggregation -----------------------------------------------------------------------
+# "sum" is the plain federated sum of leaf statistics required by Objective 5.
+# "secure-agg" and "dp" are deliberately absent: they belong to Objective 6, which this
+# work leaves untouched. The wire format already carries the additive quantities those
+# mechanisms need, so they can be added without redesigning anything here.
+aggregation = "sum"

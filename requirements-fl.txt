@@ -1,0 +1,17 @@
+# Phase II, Objectives 4-5: the federated learning side.
+#
+# Deliberately separate from requirements.txt so the Phase I baseline environment and its
+# reported numbers stay reproducible and untouched.
+#
+# Flower supplies the client/server runtime and the cross-device federation (SuperLink +
+# SuperNode). The federated GBDT itself lives in fl/ and is built on numpy, so no model
+# library is swapped in or retrained.
+#
+# The Simulation Runtime (Ray backend) is intentionally NOT installed: testing uses the
+# Deployment Runtime (SuperLink + SuperNode), which is also what the 3-device setup runs.
+# Versions of numpy/pandas/scikit-learn are left unpinned so this file cannot silently
+# downgrade the Phase I environment.
+flwr>=1.39.0,<2.0.0
+numpy
+pandas
+scikit-learn

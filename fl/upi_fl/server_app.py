@@ -183,17 +183,33 @@ def main(grid: Grid, context: Context) -> None:
         def fetch_level(frontier, depth, k=k, tree=tree, prev=prev):
             nonlocal rounds, total_floats
             per_client: list[dict] = []
+            answered: set[int] = set()       # nodes that already returned valid histograms
+
             for _attempt in range(RESYNC_ATTEMPTS):
+                # Only (re-)query nodes that haven't provided valid data yet.
+                pending = sorted(nid for nid in roster if nid not in answered)
+                if not pending:
+                    break
+
                 messages = []
-                for nid in sorted(roster):
-                    # At level 0 the client must still be missing the tree that just closed;
-                    # at deeper levels it has it. A mismatch means a restart or a desync, so
-                    # the client is sent the whole forest rather than guessing.
+                for nid in pending:
+                    # After applying the prev tree at depth 0, the client's tree-count
+                    # equals k (trees 0..k-1 folded in).  Before that application
+                    # (i.e. just before depth 0 runs) its count is still k-1.
+                    # The server checks the *last reported* count to decide whether a
+                    # full-forest resync is necessary.
                     expected = (k - 1) if depth == 0 else k
                     resync = 0 if declared.get(nid, -99) == expected else 1
                     arrays: dict = {}
                     arrays.update(gbdt.pack_trees([tree], "tree"))
-                    arrays.update(gbdt.pack_trees([prev] if prev else [], "prev"))
+                    # Only send the previous completed tree at depth 0, where the
+                    # client needs to fold it into its running predictions.  At deeper
+                    # levels the client already applied it, so sending it again would
+                    # cause a double-apply and permanently desync the tree count.
+                    if depth == 0:
+                        arrays.update(gbdt.pack_trees([prev] if prev else [], "prev"))
+                    else:
+                        arrays.update(gbdt.pack_trees([], "prev"))
                     arrays["frontier"] = np.asarray(frontier, dtype=np.int32)
                     if resync:
                         arrays.update(gbdt.pack_trees(forest.trees, "forest"))
@@ -204,7 +220,7 @@ def main(grid: Grid, context: Context) -> None:
                         arrays))
                 replies = list(grid.send_and_receive(messages))
                 rounds += 1
-                per_client, resync_asked = [], []
+                resync_asked: list[int] = []
                 for reply in replies:
                     src = reply.metadata.src_node_id
                     if reply.has_error() or not reply.has_content():
@@ -216,6 +232,7 @@ def main(grid: Grid, context: Context) -> None:
                         resync_asked.append(src)
                         continue
                     participants.add(src)
+                    answered.add(src)
                     buf = _unpack_arrays(reply.content["arrays"])["hist"]
                     total_floats += int(buf.size)
                     per_client.append(gbdt.unpack_histograms(buf, frontier,
@@ -228,7 +245,8 @@ def main(grid: Grid, context: Context) -> None:
                 print(f"    node(s) {resync_asked} out of sync - resending the forest",
                       flush=True)
             if not per_client:
-                raise RuntimeError(f"tree {k} level {depth}: no client returned statistics")
+                raise RuntimeError(f"tree {k} level {depth}: no client returned statistics"
+                                   f" after {RESYNC_ATTEMPTS} resync attempt(s)")
             return server_core.sum_histograms(per_client, frontier, schema["total_bins"])
 
         gains = gbdt.grow_tree(schema, params, tree, fetch_level)

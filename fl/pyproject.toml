@@ -6,14 +6,18 @@ build-backend = "hatchling.build"
 name = "upi-fl"
 version = "0.1.0"
 description = "Federated learning for UPI fraud detection - Phase II, Objectives 4 and 5"
-requires-python = ">=3.10"
+requires-python = ">=3.11,<4.0"
+license = { file = "LICENSE" }
 # Kept unpinned for the same reason as requirements-fl.txt: the SuperNode environment may
 # already carry the Phase I versions and we must not force a downgrade.
 dependencies = [
     "flwr>=1.39.0,<2.0.0",
-    "numpy",
-    "pandas",
-    "scikit-learn",
+    "lightgbm==4.7.0",
+    "scikit-learn==1.5.1",
+    "pandas==2.2.2",
+    "numpy==1.26.4",
+    "scipy==1.13.1",
+    "matplotlib==3.9.2",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -60,10 +64,26 @@ server-test-path = "data/fl/server_test.csv"
 aggregation = "sum"
 
 # ---- federations: how `flwr run` launches the app ------------------------------------
-[tool.flwr.federations]
-default = "local-simulation"
 
-[tool.flwr.federations.local-simulation]
-options.num-supernodes = 3
-options.backend.client-resources.num-cpus = 1
-options.backend.client-resources.num-gpus = 0.0
+#######################################################################
+# CONFIGURATION MIGRATION NOTICE:
+#
+# What was previously called "federation config" for SuperLink
+# connections in pyproject.toml has been renamed and moved.
+#
+# These settings are now **SuperLink connection configuration**
+# and are defined in the Flower configuration file.
+#
+# The entries below are commented out intentionally and are kept
+# only as a migration reference.
+#
+# Docs: https://flower.ai/docs/framework/ref-flower-configuration.html
+#######################################################################
+
+# [tool.flwr.federations]
+# default = "local-simulation"
+
+# [tool.flwr.federations.local-simulation]
+# options.num-supernodes = 3
+# options.backend.client-resources.num-cpus = 1
+# options.backend.client-resources.num-gpus = 0.0

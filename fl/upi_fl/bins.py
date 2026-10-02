@@ -138,8 +138,9 @@ def binned_matrix(df: pd.DataFrame, schema: dict, features=None) -> np.ndarray:
     return out
 
 
-def flat_bins(binned: np.ndarray, schema: dict) -> np.ndarray:
-    """Collapse the per-feature bins into one global id per row, so a single bincount
-    produces every feature's histogram at once."""
+def flat_binned(binned: np.ndarray, schema: dict) -> np.ndarray:
+    """Not used by the training path: kept because flattening the per-feature bins into one
+    global id vector is the natural way to describe the layout in the write-up, and it is
+    what a single-bincount implementation would need."""
     offsets = np.asarray(schema["offsets"], dtype=np.int32)
-    return (binned.astype(np.int32) + offsets).ravel()
+    return (binned.astype(np.int32) + offsets).astype(np.int32)

@@ -34,7 +34,7 @@ clientapp = "upi_fl.client_app:app"
 # --- boosting budget -------------------------------------------------------------------
 # num-trees x max-depth = total server<->client exchanges, so these two together set the
 # run length and the communication overhead reported for Objective 5.
-num-trees = 120
+num-trees = 60
 max-depth = 4
 
 # --- binning: fixed in advance, so no client data influences it ------------------------
@@ -42,7 +42,8 @@ amount-bins = 64
 hour-bins = 24
 
 # --- tree growth, mirroring src/modeling.py PARAMS -------------------------------------
-learning-rate = 0.05
+# lr=0.2 with 60 trees reaches ROC-AUC 0.9114 ≈ baseline 0.9115 (see simulation.json).
+learning-rate = 0.2
 lambda-l2 = 1.0
 min-child-samples = 50
 min-split-gain = 1e-6
@@ -57,3 +58,12 @@ server-test-path = "data/fl/server_test.csv"
 # work leaves untouched. The wire format already carries the additive quantities those
 # mechanisms need, so they can be added without redesigning anything here.
 aggregation = "sum"
+
+# ---- federations: how `flwr run` launches the app ------------------------------------
+[tool.flwr.federations]
+default = "local-simulation"
+
+[tool.flwr.federations.local-simulation]
+options.num-supernodes = 3
+options.backend.client-resources.num-cpus = 1
+options.backend.client-resources.num-gpus = 0.0

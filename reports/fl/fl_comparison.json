@@ -1,0 +1,84 @@
+{
+  "federated": {
+    "fixed_threshold": {
+      "threshold": 0.5,
+      "accuracy": 0.863418,
+      "precision": 0.701109,
+      "recall": 0.790798,
+      "f1": 0.743257,
+      "roc_auc": 0.911448,
+      "pr_auc": 0.857745,
+      "fpr": 0.112376,
+      "confusion_matrix": {
+        "tn": 33222,
+        "fp": 4206,
+        "fn": 2610,
+        "tp": 9866
+      },
+      "n_samples": 49904,
+      "n_fraud": 12476
+    },
+    "tuned_threshold": {
+      "threshold": 0.658977,
+      "accuracy": 0.89051,
+      "precision": 0.82475,
+      "recall": 0.71369,
+      "f1": 0.765211,
+      "roc_auc": 0.911448,
+      "pr_auc": 0.857745,
+      "fpr": 0.05055,
+      "confusion_matrix": {
+        "tn": 35536,
+        "fp": 1892,
+        "fn": 3572,
+        "tp": 8904
+      },
+      "n_samples": 49904,
+      "n_fraud": 12476
+    },
+    "best_threshold": 0.6589766227592319,
+    "n_trees": 60
+  },
+  "baseline_stratified_lightgbm": {
+    "test_default_threshold": {
+      "threshold": 0.5,
+      "accuracy": 0.862476,
+      "precision": 0.697766,
+      "recall": 0.793684,
+      "f1": 0.742641,
+      "roc_auc": 0.911532,
+      "pr_auc": 0.857689,
+      "fpr": 0.114593,
+      "confusion_matrix": {
+        "tn": 33139,
+        "fp": 4289,
+        "fn": 2574,
+        "tp": 9902
+      },
+      "n_samples": 49904,
+      "n_fraud": 12476
+    },
+    "test_tuned_threshold": {
+      "threshold": 0.691113,
+      "accuracy": 0.892554,
+      "precision": 0.845675,
+      "recall": 0.697499,
+      "f1": 0.764473,
+      "roc_auc": 0.911532,
+      "pr_auc": 0.857689,
+      "fpr": 0.042428,
+      "confusion_matrix": {
+        "tn": 35840,
+        "fp": 1588,
+        "fn": 3774,
+        "tp": 8702
+      },
+      "n_samples": 49904,
+      "n_fraud": 12476
+    }
+  },
+  "delta_roc_auc": -8.399999999997299e-05,
+  "delta_pr_auc": 5.599999999994498e-05,
+  "model_path": "C:\\Mjor project\\BE_Major_Project\\models\\fl\\simulated_model.json",
+  "simulation_path": "C:\\Mjor project\\BE_Major_Project\\reports\\fl\\simulation.json"
+}

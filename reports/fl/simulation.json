@@ -1,0 +1,51 @@
+{
+  "clients": 3,
+  "num_trees": 60,
+  "max_depth": 4,
+  "learning_rate": 0.2,
+  "lambda_l2": 1.0,
+  "pos_weight": 3.000014,
+  "seconds": 113.83,
+  "rounds": 301,
+  "aggregation_max_delta": 7.948983693495393e-10,
+  "aggregation_nodes": 29,
+  "federated_vs_pooled_max_probability_gap": 3.3306690738754696e-16,
+  "federated": {
+    "threshold": 0.5,
+    "accuracy": 0.863418,
+    "precision": 0.701109,
+    "recall": 0.790798,
+    "f1": 0.743257,
+    "roc_auc": 0.911448,
+    "pr_auc": 0.857745,
+    "fpr": 0.112376,
+    "confusion_matrix": {
+      "tn": 33222,
+      "fp": 4206,
+      "fn": 2610,
+      "tp": 9866
+    },
+    "n_samples": 49904,
+    "n_fraud": 12476
+  },
+  "pooled_control": {
+    "threshold": 0.5,
+    "accuracy": 0.863418,
+    "precision": 0.701109,
+    "recall": 0.790798,
+    "f1": 0.743257,
+    "roc_auc": 0.911448,
+    "pr_auc": 0.857745,
+    "fpr": 0.112376,
+    "confusion_matrix": {
+      "tn": 33222,
+      "fp": 4206,
+      "fn": 2610,
+      "tp": 9866
+    },
+    "n_samples": 49904,
+    "n_fraud": 12476
+  },
+  "client_floats_total": 3636792,
+  "client_megabytes_total": 29.0943
+}

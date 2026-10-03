@@ -113,22 +113,37 @@ def train(msg: Message, context: Context) -> Message:
     # --- one round of growing the current tree -----------------------------------------
     tree_index = int(cfg["tree-index"])
     base_score = float(cfg["base-score"])
-
-    # Unpack the arrays from the incoming message
     incoming = _unpack_arrays(msg.content["arrays"])
 
-    if int(cfg["resync"]):
-        task.reset(shard, base_score)
-        for t in gbdt.unpack_trees(incoming, "forest"):
+    # Bring the running score in step with the server.
+    #
+    # The server attaches the completed trees ("the forest") at the start of every tree, so
+    # the client never has to trust a counter that may not have survived the previous
+    # message - which is exactly what broke a multi-device run: the client is a fresh
+    # process per message on some setups, so "apply the previous tree" left it a tree behind
+    # and every deeper level failed its sync check.
+    #
+    # Per-tree checksums let the common case stay cheap: if the trees already folded in match
+    # the ones the server names, only the new ones are applied. Otherwise the score is
+    # rebuilt from the forest, which is authoritative.
+    if "forest_starts" in incoming:
+        forest = gbdt.unpack_trees(incoming, "forest")
+        checksums = np.asarray(incoming["forest_tree_ck"], dtype=np.float64)
+        mine = state.get("forest_ck", np.zeros(0, dtype=np.float64))
+        already = shard.trees_seen
+        consistent = (already <= len(forest) and len(mine) >= already
+                      and bool(np.array_equal(mine[:already], checksums[:already])))
+        if not consistent:
+            task.reset(shard, base_score)
+            already = 0
+        for t in forest[already:]:
             task.apply_tree(shard, t)
-    else:
-        # Only the first level of a tree carries it, and on a resync the forest already
-        # contains it, so the two branches are exclusive.
-        for t in gbdt.unpack_trees(incoming, "prev"):
-            task.apply_tree(shard, t)
+        state["forest_ck"] = checksums
 
     configs, mets = _base_reply_data(shard, state)
     if shard.trees_seen != tree_index:
+        # No forest in this message and the counts disagree, so the client cannot repair
+        # itself. Say so instead of answering with statistics from the wrong gradients.
         mets["need-resync"] = 1
         return _reply(msg, configs=configs, metrics=mets)
 

@@ -168,6 +168,16 @@ def pack_trees(trees, key: str = "tree") -> dict:
     return out
 
 
+def tree_checksum(tree) -> float:
+    """Sum of a tree's leaf values (split nodes carry nan, which is skipped).
+
+    Sent alongside the forest so a client can cheaply tell whether the trees it has already
+    folded in are the same ones the server is naming, instead of rebuilding the whole score
+    every round.
+    """
+    return float(np.nansum(np.asarray(tree.value, dtype=np.float64)))
+
+
 def unpack_trees(record, key: str) -> list[Tree]:
     """Rebuild the trees that ``pack_trees`` wrote into an ArrayRecord under ``key``."""
     starts = np.asarray(record[f"{key}_starts"])

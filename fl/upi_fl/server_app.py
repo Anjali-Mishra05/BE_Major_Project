@@ -99,6 +99,7 @@ def main(grid: Grid, context: Context) -> None:
               "min_split_gain": float(rc.get("min-split-gain", 1e-6))}
     num_trees = int(rc["num-trees"])
     eval_every = int(rc.get("eval-every-trees", 0))
+    forest_every_level = int(rc.get("forest-every-level", 1))
     base_score = 0.0
 
     out_dir = paths.resolve_out_dir(str(rc.get("out-dir", "")))
@@ -176,11 +177,10 @@ def main(grid: Grid, context: Context) -> None:
     for k in range(num_trees):
         t_tree = time.perf_counter()
         tree = gbdt.Tree(params["max_depth"])
-        prev = forest.trees[-1] if forest.trees else None
         tree_losses: list[tuple[int, float]] = []
         participants: set[int] = set()
 
-        def fetch_level(frontier, depth, k=k, tree=tree, prev=prev):
+        def fetch_level(frontier, depth, k=k, tree=tree):
             nonlocal rounds, total_floats
             per_client: list[dict] = []
             answered: set[int] = set()       # nodes that already returned valid histograms
@@ -193,26 +193,21 @@ def main(grid: Grid, context: Context) -> None:
 
                 messages = []
                 for nid in pending:
-                    # After applying the prev tree at depth 0, the client's tree-count
-                    # equals k (trees 0..k-1 folded in).  Before that application
-                    # (i.e. just before depth 0 runs) its count is still k-1.
-                    # The server checks the *last reported* count to decide whether a
-                    # full-forest resync is necessary.
+                    # The client must hold trees 0..k-1 before it can compute gradients for
+                    # tree k. Rather than trusting it to remember across messages - which is
+                    # what broke the multi-device run - the server hands over the completed
+                    # forest at the start of every tree, and again at any level where the
+                    # client says it is out of step. The per-tree checksums let a client that
+                    # did keep its state apply only what is new.
                     expected = (k - 1) if depth == 0 else k
-                    resync = 0 if declared.get(nid, -99) == expected else 1
+                    resync = 1 if declared.get(nid, -99) != expected else 0
                     arrays: dict = {}
                     arrays.update(gbdt.pack_trees([tree], "tree"))
-                    # Only send the previous completed tree at depth 0, where the
-                    # client needs to fold it into its running predictions.  At deeper
-                    # levels the client already applied it, so sending it again would
-                    # cause a double-apply and permanently desync the tree count.
-                    if depth == 0:
-                        arrays.update(gbdt.pack_trees([prev] if prev else [], "prev"))
-                    else:
-                        arrays.update(gbdt.pack_trees([], "prev"))
                     arrays["frontier"] = np.asarray(frontier, dtype=np.int32)
-                    if resync:
+                    if forest.trees and (forest_every_level or depth == 0 or resync):
                         arrays.update(gbdt.pack_trees(forest.trees, "forest"))
+                        arrays["forest_tree_ck"] = np.asarray(
+                            [gbdt.tree_checksum(t) for t in forest.trees], dtype=np.float64)
                     messages.append(build_message(
                         grid, nid, f"tree-{k}-depth-{depth}",
                         {"op": "hist", "tree-index": k, "level": depth, "resync": resync,

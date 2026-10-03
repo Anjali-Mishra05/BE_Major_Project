@@ -55,6 +55,9 @@ min-split-gain = 1e-6
 # --- server-side monitoring ------------------------------------------------------------
 eval-every-trees = 10
 server-test-path = "data/fl/server_test.csv"
+# Where the server writes the global model and the run log. Empty means "find the repo root
+# from the working directory"; set it explicitly when the app runs from a temp directory.
+out-dir = ""
 
 # --- aggregation -----------------------------------------------------------------------
 # "sum" is the plain federated sum of leaf statistics required by Objective 5.
@@ -62,6 +65,15 @@ server-test-path = "data/fl/server_test.csv"
 # work leaves untouched. The wire format already carries the additive quantities those
 # mechanisms need, so they can be added without redesigning anything here.
 aggregation = "sum"
+
+# Ship the completed trees with every level of every tree instead of only at the start of a
+# tree. A multi-device run broke without it: the client was a fresh process per message, so
+# it could not remember that it had folded in the previous tree, and every deeper level
+# failed its sync check. Cost is roughly 1 KB per tree per level in each direction, which is
+# what Objective 8 measures. Set to 0 only if you know your clients keep state between
+# messages; the run stays correct either way, but a stateless client then needs one extra
+# resync round trip per level.
+forest-every-level = 1
 
 # ---- federations: how `flwr run` launches the app ------------------------------------
 

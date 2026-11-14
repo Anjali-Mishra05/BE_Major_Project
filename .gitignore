@@ -3,6 +3,11 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
 
 # Environments
 venv/
@@ -14,6 +19,27 @@ runtime/
 data/fl/client_*.csv
 data/fl/server_*.csv
 env/
+
+# Local secrets and machine-specific configuration (keep example templates)
+.env
+.env.*
+!.env.example
+!.env.sample
+credentials/
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Runtime databases and temporary files
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-wal
+*.sqlite3-shm
+*.tmp
+*.bak
 
 # Jupyter
 .ipynb_checkpoints/
@@ -31,14 +57,18 @@ Thumbs.db
 *.log
 reports/train_log.txt
 reports/fl/smoke/
+playwright-report/
+test-results/
+dashboard/coverage/
+models/fl/global_tree_*.json
+
+# Newly generated processed datasets; previously tracked files stay tracked.
+data/processed/
 
 # Tracked deliberately, not ignored:
-#   models/          ~48 KB, the exact models behind the reported metrics
-#   reports/         Phase I deliverables (results, metrics, figures)
+#   models/          saved models behind the reported metrics
+#   reports/         deliverables (results, metrics, figures, validation summaries)
 #   data/samples/    4 KB demo fixture, regenerated deterministically (seed 42)
 #
-# data/processed/ is 67 MB and regenerable from data/raw/ via
-# notebooks/01_preprocessing.ipynb. Uncomment to stop tracking new changes to it;
-# note this does NOT untrack what is already committed, and the existing blobs
-# stay in history until it is rewritten.
-# data/processed/
+# Existing raw/processed datasets remain in Git history. The rule above prevents
+# additional processed files from being added; it does not remove tracked data.

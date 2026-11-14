@@ -130,10 +130,13 @@ def train(msg: Message, context: Context) -> Message:
     # rebuilt from the forest, which is authoritative.
     if "forest_starts" in incoming:
         forest = gbdt.unpack_trees(incoming, "forest")
-        checksums = np.asarray(incoming["forest_tree_ck"], dtype=np.float64)
-        mine = state.get("forest_ck", np.zeros(0, dtype=np.float64))
+        if len(forest) != tree_index:
+            raise ValueError("forest length does not match tree-index")
+        checksums = np.asarray(incoming["forest_tree_ck"], dtype=np.uint8)
+        mine = state.get("forest_ck", np.zeros((0, 32), dtype=np.uint8))
         already = shard.trees_seen
-        consistent = (already <= len(forest) and len(mine) >= already
+        consistent = (state.get("base_score") == base_score
+                      and already <= len(forest) and len(mine) >= already
                       and bool(np.array_equal(mine[:already], checksums[:already])))
         if not consistent:
             task.reset(shard, base_score)
@@ -141,6 +144,7 @@ def train(msg: Message, context: Context) -> Message:
         for t in forest[already:]:
             task.apply_tree(shard, t)
         state["forest_ck"] = checksums
+        state["base_score"] = base_score
 
     configs, mets = _base_reply_data(shard, state)
     if shard.trees_seen != tree_index:

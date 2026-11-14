@@ -136,6 +136,36 @@ class ProtocolTests(unittest.TestCase):
         right.set_leaf(b, -1)
         self.assertFalse(np.array_equal(gbdt.tree_checksum(left), gbdt.tree_checksum(right)))
 
+    def client_hist(self, trees, base_score=0.0, tree_index=None):
+        arrays = gbdt.pack_trees(trees, "forest")
+        arrays["forest_tree_ck"] = np.asarray(
+            [gbdt.tree_checksum(t) for t in trees], dtype=np.uint8)
+        arrays.update(gbdt.pack_trees([gbdt.Tree(1)], "tree"))
+        arrays["frontier"] = np.array([0], dtype=np.int32)
+        msg = server_app.build_message(LocalGrid(self.contexts), 1, "sync-check",
+            {"op": "hist", "tree-index": len(trees) if tree_index is None else tree_index,
+             "base-score": base_score, "pos-weight": 1.0}, arrays)
+        return client_app.train(msg, self.contexts[1])
+
+    def test_base_score_change_rebuilds_cached_predictions(self):
+        self.client_hist([], base_score=0.25)
+        np.testing.assert_allclose(client_app._STATE["shard"].raw, 0.25)
+        self.client_hist([], base_score=-0.75)
+        np.testing.assert_allclose(client_app._STATE["shard"].raw, -0.75)
+
+    def test_empty_forest_clears_previous_model(self):
+        tree = gbdt.Tree(1)
+        tree.set_leaf(0, 0.8)
+        self.client_hist([tree])
+        np.testing.assert_allclose(client_app._STATE["shard"].raw, 0.8)
+        self.client_hist([])
+        np.testing.assert_allclose(client_app._STATE["shard"].raw, 0)
+        self.assertEqual(client_app._STATE["shard"].trees_seen, 0)
+
+    def test_incorrect_forest_length_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "forest length"):
+            self.client_hist([], tree_index=1)
+
 
 if __name__ == "__main__":
     unittest.main()

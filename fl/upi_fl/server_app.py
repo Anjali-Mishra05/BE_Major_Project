@@ -213,10 +213,11 @@ def main(grid: Grid, context: Context) -> None:
                     arrays: dict = {}
                     arrays.update(gbdt.pack_trees([tree], "tree"))
                     arrays["frontier"] = np.asarray(frontier, dtype=np.int32)
-                    if forest.trees and (forest_every_level or depth == 0 or resync):
+                    # Include the empty forest too, so a new model resets client scores.
+                    if forest_every_level or depth == 0 or resync:
                         arrays.update(gbdt.pack_trees(forest.trees, "forest"))
                         arrays["forest_tree_ck"] = np.asarray(
-                            [gbdt.tree_checksum(t) for t in forest.trees], dtype=np.float64)
+                            [gbdt.tree_checksum(t) for t in forest.trees], dtype=np.uint8)
                     messages.append(build_message(
                         grid, nid, f"tree-{k}-depth-{depth}",
                         {"op": "hist", "tree-index": k, "level": depth, "resync": resync,

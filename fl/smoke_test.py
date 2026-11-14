@@ -46,6 +46,9 @@ def main():
     home.mkdir()
     env = {**os.environ, "FLWR_HOME": str(home), "PYTHONUNBUFFERED": "1",
            "PYTHONIOENCODING": "utf-8", "FLWR_TELEMETRY_ENABLED": "0"}
+    # Flower launches additional executables by name. Calling this script through
+    # .venv/Scripts/python must work even when the environment is not activated.
+    env["PATH"] = str(Path(sys.executable).parent) + os.pathsep + env.get("PATH", "")
     # Reserve distinct free ports before launching. Another process can still race
     # after release; startup checks surface that as a failed smoke test.
     reservations = [socket.socket() for _ in range(4)]

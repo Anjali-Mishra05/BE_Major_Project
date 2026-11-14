@@ -169,14 +169,13 @@ def pack_trees(trees, key: str = "tree") -> dict:
     return out
 
 
-def tree_checksum(tree) -> float:
-    """Sum of a tree's leaf values (split nodes carry nan, which is skipped).
-
-    Sent alongside the forest so a client can cheaply tell whether the trees it has already
-    folded in are the same ones the server is naming, instead of rebuilding the whole score
-    every round.
-    """
-    return float(np.nansum(np.asarray(tree.value, dtype=np.float64)))
+def tree_checksum(tree) -> np.ndarray:
+    """Fingerprint tree structure and values; equal leaf sums are not equal models."""
+    digest = hashlib.sha256()
+    for name in TREE_FIELDS:
+        dtype = "<f8" if name == "value" else "<i4"
+        digest.update(np.asarray(getattr(tree, name), dtype=dtype).tobytes())
+    return np.frombuffer(digest.digest(), dtype=np.uint8).copy()
 
 
 def unpack_trees(record, key: str) -> list[Tree]:

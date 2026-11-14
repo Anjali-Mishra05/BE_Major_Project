@@ -127,7 +127,7 @@ def main() -> None:
 
     X, y, ts = load_data()
     tr, va, te = stratified_split(X, y, ts)
-    pool = np.concatenate([tr, va])                    # what the clients will hold
+    pool = tr  # same training rows as baseline; validation is never used for fitting
     print(f"\n  {len(X):,} rows x {X.shape[1]} features   fraud {y.sum():,} ({y.mean()*100:.2f}%)")
     print(f"  client pool {len(pool):,} rows   server test {len(te):,} rows")
     print("  (the server test rows are the Phase I test rows, so Objective 5 compares the")
@@ -136,7 +136,7 @@ def main() -> None:
     # --- assignment
     if args.mode == "bank":
         labels = bank_labels(X)
-        counts = {str(k): int(v) for k, v in pd.Series(labels).value_counts().items()}
+        counts = {str(k): int(v) for k, v in pd.Series(labels[pool]).value_counts().items()}
         if args.clients > len(counts):
             sys.exit(f"--clients {args.clients} exceeds the {len(counts)} sender banks available")
         mapping = assign_banks_to_clients(counts, args.clients)
@@ -186,6 +186,7 @@ def main() -> None:
         print(f"  {c:<8}{len(idx):>10,}{int(yc.sum()):>9,}{yc.mean()*100:>11.2f}%   {shown}")
 
     write_rows(args.out / "server_test.csv", X, y, ts, te)
+    write_rows(args.out / "server_validation.csv", X, y, ts, va)
     summary["server_test"] = {
         "rows": int(len(te)),
         "fraud": int(y.iloc[te].sum()),
@@ -199,10 +200,13 @@ def main() -> None:
     features = list(X.columns)
     kinds = {name: bins.classify_feature(name) for name in features}
     bin_counts = bins.bin_counts_for(features, kinds, args.amount_bins, args.hour_bins)
-    edges = {bins.AMOUNT_COLUMN: bins.amount_edges(X[bins.AMOUNT_COLUMN], args.amount_bins)}
+    # Public, fixed domain: neither test data nor private client extrema define the schema.
+    edges = {bins.AMOUNT_COLUMN: np.linspace(0, np.log1p(1_000_000), args.amount_bins + 1).tolist()}
     schema = bins.build_schema(features, kinds, bin_counts, edges)
     schema_path = bins.save_schema(schema)
     summary["bins"] = {
+        "amount_domain_inr": [0, 1000000],
+        "domain_source": "fixed public experiment configuration; values outside range clipped",
         "amount_bins": args.amount_bins,
         "hour_bins": args.hour_bins,
         "total_bins": schema["total_bins"],

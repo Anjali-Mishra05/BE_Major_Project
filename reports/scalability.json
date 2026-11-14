@@ -1,0 +1,30 @@
+{
+  "scope": "synthetic, single-process compute/aggregation benchmark; not network scaling",
+  "cohorts": [
+    {
+      "clients": 2,
+      "records": 6000,
+      "trees": 5,
+      "seconds": 0.031463800001802156,
+      "masked_base64_bytes": 1920,
+      "rounds": 10
+    },
+    {
+      "clients": 3,
+      "records": 6000,
+      "trees": 5,
+      "seconds": 0.02746320000005653,
+      "masked_base64_bytes": 2880,
+      "rounds": 10
+    },
+    {
+      "clients": 5,
+      "records": 6000,
+      "trees": 5,
+      "seconds": 0.041887399998813635,
+      "masked_base64_bytes": 4800,
+      "rounds": 10
+    }
+  ],
+  "max_prediction_gap": 5.673783665116616e-11
+}

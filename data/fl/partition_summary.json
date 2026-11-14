@@ -5,15 +5,15 @@
   "dataset": "data\\processed\\upi_transactions_ml_ready_final.csv",
   "split": "stratified (Phase I partition boundaries)",
   "rows_total": 332693,
-  "rows_pooled_at_clients": 282789,
+  "rows_pooled_at_clients": 232885,
   "server_test_file": "data\\fl\\server_test.csv",
   "clients": [
     {
       "client": 0,
       "file": "data\\fl\\client_0.csv",
-      "rows": 150345,
-      "fraud": 37606,
-      "fraud_rate": 0.250131,
+      "rows": 123814,
+      "fraud": 31067,
+      "fraud_rate": 0.250917,
       "banks": [
         "IndusInd",
         "Kotak",
@@ -24,9 +24,9 @@
     {
       "client": 1,
       "file": "data\\fl\\client_1.csv",
-      "rows": 132444,
-      "fraud": 33091,
-      "fraud_rate": 0.249849,
+      "rows": 109071,
+      "fraud": 27154,
+      "fraud_rate": 0.248957,
       "banks": [
         "Axis",
         "HDFC",
@@ -41,6 +41,11 @@
     "fraud_rate": 0.25
   },
   "bins": {
+    "amount_domain_inr": [
+      0,
+      1000000
+    ],
+    "domain_source": "fixed public experiment configuration; values outside range clipped",
     "amount_bins": 64,
     "hour_bins": 24,
     "total_bins": 226,

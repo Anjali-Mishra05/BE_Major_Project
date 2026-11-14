@@ -7,6 +7,12 @@ __pycache__/
 # Environments
 venv/
 .venv/
+node_modules/
+.npm-cache/
+dashboard/dist/
+runtime/
+data/fl/client_*.csv
+data/fl/server_*.csv
 env/
 
 # Jupyter

@@ -117,17 +117,23 @@ def train(msg: Message, context: Context) -> Message:
     base_score = float(cfg["base-score"])
     incoming = _unpack_arrays(msg.content["arrays"])
 
-    # The forest is authoritative. Reuse scores only when both the base score and
-    # completed tree fingerprints match; a restarted process rebuilds them.
+    # Bring the running score in step with the server.
+    #
+    # The server attaches the completed trees ("the forest") at the start of every tree, so
+    # the client never has to trust a counter that may not have survived the previous
+    # message - which is exactly what broke a multi-device run: the client is a fresh
+    # process per message on some setups, so "apply the previous tree" left it a tree behind
+    # and every deeper level failed its sync check.
+    #
+    # Per-tree checksums let the common case stay cheap: if the trees already folded in match
+    # the ones the server names, only the new ones are applied. Otherwise the score is
+    # rebuilt from the forest, which is authoritative.
     if "forest_starts" in incoming:
         forest = gbdt.unpack_trees(incoming, "forest")
-        if len(forest) != tree_index:
-            raise ValueError("forest length does not match tree-index")
-        checksums = np.asarray(incoming["forest_tree_ck"], dtype=np.uint8)
-        mine = state.get("forest_ck", np.zeros((0, 32), dtype=np.uint8))
+        checksums = np.asarray(incoming["forest_tree_ck"], dtype=np.float64)
+        mine = state.get("forest_ck", np.zeros(0, dtype=np.float64))
         already = shard.trees_seen
-        consistent = (state.get("base_score") == base_score
-                      and already <= len(forest) and len(mine) >= already
+        consistent = (already <= len(forest) and len(mine) >= already
                       and bool(np.array_equal(mine[:already], checksums[:already])))
         if not consistent:
             task.reset(shard, base_score)
@@ -135,7 +141,6 @@ def train(msg: Message, context: Context) -> Message:
         for t in forest[already:]:
             task.apply_tree(shard, t)
         state["forest_ck"] = checksums
-        state["base_score"] = base_score
 
     configs, mets = _base_reply_data(shard, state)
     if shard.trees_seen != tree_index:

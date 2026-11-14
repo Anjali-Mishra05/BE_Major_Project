@@ -202,21 +202,21 @@ def main(grid: Grid, context: Context) -> None:
 
                 messages = []
                 for nid in pending:
-                    # Depth zero always carries the forest, including an empty one.
-                    # Later levels can recover clients whose process has restarted.
+                    # The client must hold trees 0..k-1 before it can compute gradients for
+                    # tree k. Rather than trusting it to remember across messages - which is
+                    # what broke the multi-device run - the server hands over the completed
+                    # forest at the start of every tree, and again at any level where the
+                    # client says it is out of step. The per-tree checksums let a client that
+                    # did keep its state apply only what is new.
                     expected = (k - 1) if depth == 0 else k
                     resync = 1 if declared.get(nid, -99) != expected else 0
                     arrays: dict = {}
                     arrays.update(gbdt.pack_trees([tree], "tree"))
                     arrays["frontier"] = np.asarray(frontier, dtype=np.int32)
-                    if forest_every_level or depth == 0 or resync:
+                    if forest.trees and (forest_every_level or depth == 0 or resync):
                         arrays.update(gbdt.pack_trees(forest.trees, "forest"))
                         arrays["forest_tree_ck"] = np.asarray(
-                            [gbdt.tree_checksum(t) for t in forest.trees], dtype=np.uint8)
-                    print(f"  [send] tree={k + 1} depth={depth} node={nid} "
-                          f"host={roster[nid]['hostname']} "
-                          f"completed-trees={len(forest.trees)} "
-                          f"forest-attached={'forest_starts' in arrays}", flush=True)
+                            [gbdt.tree_checksum(t) for t in forest.trees], dtype=np.float64)
                     messages.append(build_message(
                         grid, nid, f"tree-{k}-depth-{depth}",
                         {"op": "hist", "tree-index": k, "level": depth, "resync": resync,

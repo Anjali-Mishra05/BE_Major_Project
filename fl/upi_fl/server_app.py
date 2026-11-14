@@ -109,6 +109,10 @@ def main(grid: Grid, context: Context) -> None:
     reports_dir.mkdir(parents=True, exist_ok=True)
 
     node_ids = sorted(grid.get_node_ids())
+    min_clients = int(rc.get("min-clients", 2))
+    if len(node_ids) < min_clients:
+        raise RuntimeError(f"expected at least {min_clients} clients, found {len(node_ids)}; "
+                           "connect the SuperNodes before submitting the run")
     rule("=")
     print(" FEDERATED GBDT - SERVER".center(W))
     print(f" {len(node_ids)} client node(s) in the federation".center(W))
@@ -136,6 +140,11 @@ def main(grid: Grid, context: Context) -> None:
                        "n_neg": int(mr["n-neg"])}
     if not roster:
         raise RuntimeError("no client answered the hello round - is any SuperNode connected?")
+    if len(roster) != len(node_ids):
+        raise RuntimeError("not all connected clients answered hello; check client logs")
+    partitions = [v["partition_id"] for v in roster.values()]
+    if len(set(partitions)) != len(partitions):
+        raise RuntimeError("duplicate partition-id: each client must use a distinct shard")
 
     n_pos = sum(v["n_pos"] for v in roster.values())
     n_neg = sum(v["n_neg"] for v in roster.values())
@@ -218,6 +227,8 @@ def main(grid: Grid, context: Context) -> None:
                 resync_asked: list[int] = []
                 for reply in replies:
                     src = reply.metadata.src_node_id
+                    if src not in pending or src in answered:
+                        continue
                     if reply.has_error() or not reply.has_content():
                         print(f"    node {src}: {reply.error}", flush=True)
                         continue
@@ -226,28 +237,43 @@ def main(grid: Grid, context: Context) -> None:
                     if int(mr.get("need-resync", 0)):
                         resync_asked.append(src)
                         continue
+                    buf = _unpack_arrays(reply.content["arrays"])["hist"]
+                    if (buf.ndim != 1 or buf.size != len(frontier) * 3 * schema["total_bins"]
+                            or not np.isfinite(buf).all()):
+                        raise RuntimeError(f"node {src}: invalid histogram payload")
                     participants.add(src)
                     answered.add(src)
-                    buf = _unpack_arrays(reply.content["arrays"])["hist"]
                     total_floats += int(buf.size)
+                    print(f"  [receive] tree={k + 1} depth={depth} node={src} "
+                          f"partition={roster[src]['partition_id']} "
+                          f"trees-seen={mr['tree-count']} histogram-bytes={buf.nbytes}",
+                          flush=True)
                     per_client.append(gbdt.unpack_histograms(buf, frontier,
                                                              schema["total_bins"]))
-                    if depth == 0 and not tree_losses:
+                    if depth == 0:
                         tree_losses.append((int(mr["num-examples"]),
                                             float(mr["loss"])))
-                if not resync_asked:
+                if len(answered) == len(roster):
                     break
-                print(f"    node(s) {resync_asked} out of sync - resending the forest",
-                      flush=True)
-            if not per_client:
-                raise RuntimeError(f"tree {k} level {depth}: no client returned statistics"
-                                   f" after {RESYNC_ATTEMPTS} resync attempt(s)")
+                if resync_asked:
+                    print(f"    node(s) {resync_asked} out of sync - resending the forest",
+                          flush=True)
+            missing = sorted(set(roster) - answered)
+            if missing:
+                raise RuntimeError(f"tree {k} level {depth}: missing clients {missing}"
+                                   f" after {RESYNC_ATTEMPTS} attempts; refusing partial aggregation")
+            print(f"  [aggregate] tree={k + 1} depth={depth} "
+                  f"clients={sorted(answered)} frontier={list(frontier)} "
+                  "operation=sum(gradient,hessian,count)", flush=True)
             return server_core.sum_histograms(per_client, frontier, schema["total_bins"])
 
         gains = gbdt.grow_tree(schema, params, tree, fetch_level)
         for j, gain in gains:
             forest.gain[j] += gain
         forest.add_tree(tree)
+        print(f"  [model] completed-trees={len(forest.trees)} "
+              f"nodes={tree.n_nodes} leaf-values="
+              f"{[round(v, 6) for v in tree.value if np.isfinite(v)]}", flush=True)
 
         weight = sum(n for n, _ in tree_losses)
         loss = sum(n * v for n, v in tree_losses) / weight if weight else float("nan")

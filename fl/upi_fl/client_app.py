@@ -13,10 +13,9 @@ Protocol (the server drives; see ``server_app`` for the other half)
 
 State across messages
 ---------------------
-A client keeps its shard and its running score, so the server only ever sends the tree that
-just closed rather than the whole model. If the two ever disagree about how many trees the
-client has folded in, the client answers ``need-resync`` and the server resends the forest -
-so a client that restarts mid-run rejoins instead of silently training on a stale model.
+A process may be restarted between any two messages. The server supplies completed trees
+at every level by default; the client rebuilds its score or applies only new trees when
+its cached fingerprints agree. A cache is scoped to one run and one node.
 """
 
 from __future__ import annotations
@@ -39,13 +38,14 @@ from upi_fl import bins, gbdt, paths, task
 
 app = ClientApp()
 
-# One instance serves every message of a run, so the shard is read and binned once. The
-# cache is module level so it also survives the instance being recreated between messages.
+# Optional process-local cache; correctness must not depend on its survival.
 _STATE: dict = {}
 
 
 def _state(context: Context) -> dict:
-    if _STATE:
+    identity = (context.run_id, context.node_id, dict(context.node_config),
+                dict(context.run_config))
+    if _STATE.get("identity") == identity:
         return _STATE
     schema = bins.load_schema(
         paths.resolve_path(context.run_config.get("schema-path", ""),
@@ -53,8 +53,10 @@ def _state(context: Context) -> dict:
                            what="schema"))
     partition_id = int(context.node_config.get("partition-id", 0))
     data_path = context.node_config.get("data-path", "") or f"data/fl/client_{partition_id}.csv"
-    shard = task.load_shard(paths.resolve_path(data_path, what="data"), schema)
-    _STATE.update(schema=schema, shard=shard, partition_id=partition_id,
+    shard = task.load_shard(paths.resolve_path(data_path, what="data"), schema,
+                            use_cache=False)
+    _STATE.clear()
+    _STATE.update(identity=identity, schema=schema, shard=shard, partition_id=partition_id,
                   num_partitions=int(context.node_config.get("num-partitions", 1)))
     return _STATE
 

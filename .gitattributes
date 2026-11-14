@@ -1,0 +1,2 @@
+# LightGBM's text-model tree_sizes are byte offsets and require LF checkout.
+models/*.txt text eol=lf

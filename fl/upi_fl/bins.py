@@ -14,9 +14,8 @@ Kinds of feature in this dataset
 ``hour``    0-23, one bin each
 ``binary``  every one-hot column and flag, two bins (0 and 1)
 
-The bin edges are deliberately computed from the whole processed CSV, the same file the
-Phase I split was drawn from. That is the same choice LightGBM makes when it builds its own
-histogram bins, and it is schema, not personal data.
+The partition script uses the fixed public INR domain [0, 1,000,000]. Values outside
+the domain map to boundary bins. Test data and private extrema do not define the edges.
 """
 
 from __future__ import annotations

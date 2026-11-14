@@ -7,6 +7,12 @@ __pycache__/
 # Environments
 venv/
 .venv/
+node_modules/
+.npm-cache/
+dashboard/dist/
+runtime/
+data/fl/client_*.csv
+data/fl/server_*.csv
 env/
 
 # Jupyter
@@ -24,6 +30,7 @@ Thumbs.db
 # Run artefacts
 *.log
 reports/train_log.txt
+reports/fl/smoke/
 
 # Tracked deliberately, not ignored:
 #   models/          ~48 KB, the exact models behind the reported metrics

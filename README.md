@@ -1,4 +1,26 @@
-# UPI Fraud Detection — Phase I Baseline
+# UPI Fraud Detection — Federated Software Prototype
+
+The integrated software runtime now includes a React dashboard, independent local
+training clients, pairwise secure aggregation, record-level differential privacy with
+a durable privacy ledger, final-model delivery, and local risk inference.
+
+- **Start and operate:** [Dashboard and three-device runbook](docs/dashboard_runbook.md)
+- **What is implemented:** [Objectives and acceptance evidence](docs/objectives_status.md)
+- **Privacy assumptions:** [Mechanism and limitations](docs/privacy.md)
+- **Measured comparison:** [Software results](reports/software_comparison.json)
+- **Recovery evidence:** [Real-process restart and dropout checks](reports/network_acceptance.json)
+
+For the prepared local environment:
+
+```powershell
+.\.venv\Scripts\python.exe -m service.lab --trees 20 --depth 3 --serve
+```
+
+Open server port 8080 and client ports 8081/8082 on localhost. This runs three processes
+on one machine; the linked runbook explains the physical three-device deployment.
+All changes are local. Nothing is pushed to GitHub by these scripts.
+
+## Original Phase I baseline documentation
 
 Major Project (Phase I) · *Federated Learning, Secure Aggregation, Differential Privacy
 & Edge AI for Real-Time UPI Fraud Detection via a Smart POS Prototype*

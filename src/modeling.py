@@ -60,7 +60,9 @@ def load(split: str) -> tuple[lgb.Booster, "Path"]:
     if not path.exists():
         sys.exit(f"No model trained on the {split} split: {path}\n"
                  f"Run:  python src/train_baseline.py")
-    return lgb.Booster(model_file=str(path)), path
+    # Git may check text models out with CRLF on Windows. LightGBM's embedded tree
+    # byte offsets refer to LF data; normalizing through read_text avoids native errors.
+    return lgb.Booster(model_str=path.read_text(encoding="utf-8")), path
 
 
 # -------------------------------------------------------------------------- metrics

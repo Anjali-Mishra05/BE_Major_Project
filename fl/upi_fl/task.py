@@ -95,9 +95,8 @@ def apply_tree(shard: Shard, tree) -> None:
 def histograms(shard: Shard, tree, node_ids, pos_weight: float, schema: dict) -> np.ndarray:
     """Per-bin gradient/hessian/count totals for each requested node, packed flat.
 
-    This is the entire outbound payload of a client for one round: nothing here can be
-    reversed into a transaction, and every value is a sum that the other clients' values
-    simply add to.
+    These statistics are sensitive: aggregation alone is not a privacy guarantee.
+    Use the protected runtime for masking and calibrated noise before transmission.
     """
     g, h = gbdt.gradients(shard.raw, shard.y, pos_weight)
     node = tree.node_index(shard.binned)

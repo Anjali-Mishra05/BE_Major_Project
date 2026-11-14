@@ -1,0 +1,127 @@
+{
+  "environment": "one host, three independent processes, real HTTP; not a physical LAN test",
+  "dataset": "repository dataset with synthetic fraud labels",
+  "runs": [
+    {
+      "mode": "plain",
+      "metrics": {
+        "threshold": 0.5,
+        "accuracy": 0.890269,
+        "precision": 0.864583,
+        "recall": 0.665277,
+        "f1": 0.751948,
+        "roc_auc": 0.906,
+        "pr_auc": 0.839347,
+        "fpr": 0.034733,
+        "confusion_matrix": {
+          "tn": 36128,
+          "fp": 1300,
+          "fn": 4176,
+          "tp": 8300
+        },
+        "n_samples": 49904,
+        "n_fraud": 12476
+      },
+      "seconds": 107.03249311447144,
+      "rounds": 80,
+      "privacy": {
+        "epsilon": 0,
+        "delta": 1e-06,
+        "scope": "record add/remove; per run"
+      },
+      "upload_bytes": 5177587,
+      "download_bytes": 3246538,
+      "inference_ms_p50": 7.183899997471599,
+      "inference_ms_p95": 12.420119999296725,
+      "model_bytes": 39355,
+      "model_hash": "2aaf0fc7b13b2d4b11088906acb739902c1b73f8d7c038e6cb11d35418e5af07"
+    },
+    {
+      "mode": "secure",
+      "metrics": {
+        "threshold": 0.5,
+        "accuracy": 0.890269,
+        "precision": 0.864583,
+        "recall": 0.665277,
+        "f1": 0.751948,
+        "roc_auc": 0.906,
+        "pr_auc": 0.839347,
+        "fpr": 0.034733,
+        "confusion_matrix": {
+          "tn": 36128,
+          "fp": 1300,
+          "fn": 4176,
+          "tp": 8300
+        },
+        "n_samples": 49904,
+        "n_fraud": 12476
+      },
+      "seconds": 103.95264339447021,
+      "rounds": 80,
+      "privacy": {
+        "epsilon": 0,
+        "delta": 1e-06,
+        "scope": "record add/remove; per run"
+      },
+      "upload_bytes": 4350274,
+      "download_bytes": 3172887,
+      "inference_ms_p50": 8.655899997393135,
+      "inference_ms_p95": 13.689480000175534,
+      "model_bytes": 39356,
+      "model_hash": "63e347b1cf6e2e28f62951c49784c99049a3d53cbda5205a7dd68f98f9a09217"
+    },
+    {
+      "mode": "dp",
+      "metrics": {
+        "threshold": 0.5,
+        "accuracy": 0.872395,
+        "precision": 0.784305,
+        "recall": 0.675297,
+        "f1": 0.72573,
+        "roc_auc": 0.892976,
+        "pr_auc": 0.805873,
+        "fpr": 0.061906,
+        "confusion_matrix": {
+          "tn": 35111,
+          "fp": 2317,
+          "fn": 4051,
+          "tp": 8425
+        },
+        "n_samples": 49904,
+        "n_fraud": 12476
+      },
+      "seconds": 194.81140899658203,
+      "rounds": 80,
+      "privacy": {
+        "epsilon": 6.5019700011919985,
+        "delta": 1e-06,
+        "scope": "record add/remove; per run"
+      },
+      "upload_bytes": 4350274,
+      "download_bytes": 7533080,
+      "inference_ms_p50": 7.616099999722792,
+      "inference_ms_p95": 10.304760000872191,
+      "model_bytes": 39467,
+      "model_hash": "d1f69d67d3266a50cab11b7fc1dd38849d973499e162bae71a984d2dab62efbd"
+    }
+  ],
+  "centralized_saved_baseline": {
+    "threshold": 0.5,
+    "accuracy": 0.862476,
+    "precision": 0.697766,
+    "recall": 0.793684,
+    "f1": 0.742641,
+    "roc_auc": 0.911532,
+    "pr_auc": 0.857689,
+    "fpr": 0.114593,
+    "confusion_matrix": {
+      "tn": 33139,
+      "fp": 4289,
+      "fn": 2574,
+      "tp": 9902
+    },
+    "n_samples": 49904,
+    "n_fraud": 12476
+  },
+  "baseline_note": "Saved baseline re-evaluated, not retrained; identical training/test indices, different tree algorithm and class weighting."
+}

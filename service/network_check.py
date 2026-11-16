@@ -1,5 +1,6 @@
 """Real-process restart/dropout acceptance check on synthetic fixtures."""
 import json
+import argparse
 import os
 from pathlib import Path
 import subprocess
@@ -13,6 +14,9 @@ from .lab import wait_json
 
 
 def main():
+    ap=argparse.ArgumentParser()
+    ap.add_argument('--flower',action='store_true',help='Use Flower gRPC instead of HTTP polling')
+    args=ap.parse_args()
     root=ROOT/'runtime'/f'network-check-{time.time_ns()}'
     base='http://127.0.0.1:8180'
     provision(root/'keys',2,base)
@@ -30,6 +34,12 @@ def main():
         '--out',str(root/'server'),'--schema',str(root/'schema.json'),'--test',str(root/'0.csv'),'--port','8180']]
     commands += [[sys.executable,'-m','service.client','--config',str(root/'keys'/f'client-{i}.json'),
         '--schema',str(root/'schema.json'),'--port',str(8181+i)] for i in range(2)]
+    if args.flower:
+        commands=[[sys.executable,'-m','service.flower_transport','server','--config',str(root/'keys/server.json'),
+            '--out',str(root/'server'),'--schema',str(root/'schema.json'),'--test',str(root/'0.csv'),
+            '--port','8180','--address','127.0.0.1:8185']]
+        commands += [[sys.executable,'-m','service.flower_transport','client','--config',str(root/'keys'/f'client-{i}.json'),
+            '--schema',str(root/'schema.json'),'--port',str(8181+i),'--address','127.0.0.1:8185'] for i in range(2)]
     processes=[];logs=[]
     def launch(i):
         log=(root/f'process-{i}-{time.time_ns()}.log').open('w');logs.append(log)
@@ -67,11 +77,11 @@ def main():
         stop(processes[2])
         failed=terminal()
         assert failed['status']=='failed' and 'No partial aggregate' in failed['error'],failed
-        result={'transport':'real loopback HTTP, three child processes',
+        result={'transport':'Flower gRPC, three child processes' if args.flower else 'real loopback HTTP, three child processes',
             'restart_mid_run':'passed; final model acknowledged by both clients',
             'dropout':'passed; bounded failure without partial aggregation',
             'recovered_rounds':recovered['rounds'],'dropout_error':failed['error']}
-        atomic_json(ROOT/'reports/network_acceptance.json',result)
+        atomic_json(ROOT/'reports'/('flower_dashboard_acceptance.json' if args.flower else 'network_acceptance.json'),result)
         print(json.dumps(result,indent=2))
     finally:
         for p in processes:stop(p)

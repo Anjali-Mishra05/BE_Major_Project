@@ -2,7 +2,7 @@
 
 A software research prototype for privacy-preserving UPI fraud detection. It combines a centralized LightGBM baseline, federated histogram-based gradient-boosted trees, secure aggregation, differential privacy, and a React dashboard for the server and individual training clients.
 
-**Current status:** the integrated software has been tested with one server and two independent client processes on a Windows laptop. Physical three-device LAN acceptance and Raspberry Pi/Jetson/Smart POS hardware integration remain pending. The model is **GBDT, not GNN or neural FedAvg**.
+**Current status:** the integrated software has passed a one-laptop Docker demonstration with a Flower server and three isolated POS clients, including ONNX inference, restart recovery and bounded dropout failure. Separate Windows algorithm/load benchmarks are available in the dashboard. Physical three-device LAN acceptance and Raspberry Pi/Jetson/Smart POS hardware integration remain pending. The federated model is **GBDT, not GNN or neural FedAvg**.
 
 ![Server dashboard showing a completed training run](reports/dashboard-preview.jpg)
 
@@ -15,6 +15,9 @@ A software research prototype for privacy-preserving UPI fraud detection. It com
 - Saves protected releases in a local ledger so retries reuse the same response and privacy cost.
 - Delivers the final model to every client and verifies checksum acknowledgements.
 - Scores local transactions through a client dashboard and reports inference latency.
+- Exports the final federated model to ONNX and scores locally with ONNX Runtime CPU.
+- Compares logistic regression, decision tree and random forest accuracy and ONNX latency/CPU/RAM under scheduled transaction loads.
+- Provides a Docker demonstration with two or three private POS clients and Flower coordination.
 
 ## Architecture
 
@@ -36,7 +39,28 @@ Pairwise masking in protected modes       Pairwise masking in protected modes
                  Local fraud-risk inference
 ```
 
-The integrated dashboard runtime uses `service.server` and `service.client`. The original Flower runtime under `fl/` is retained and tested separately; its commands do **not** automatically enable the integrated dashboard or its privacy mechanisms.
+The integrated dashboard runtime supports HTTP polling (`service.server` / `service.client`) and Flower gRPC (`service.flower_transport`). The Docker demonstration uses Flower with the same histogram protocol, secure aggregation and DP ledger. The original Flower SuperLink/SuperNode runtime under `fl/` is retained separately; its commands do **not** automatically enable the integrated dashboard or its privacy mechanisms.
+
+## This semester: one-laptop POS simulation
+
+Follow the [semester demo runbook](docs/semester_demo.md) for setup, verification and presentation order.
+It includes restart commands for this prepared laptop, a timed examiner walkthrough,
+the role of each server/POS dashboard tab, and a map of the saved benchmark reports.
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-dashboard.txt
+.\.venv\Scripts\python.exe -m service.docker_demo --clients 3
+docker compose -f runtime/docker-demo/compose.json up --build -d
+.\.venv\Scripts\python.exe -m service.benchmarks --seconds 5 --rates 50 250 1000
+```
+
+Docker Desktop must be running in Linux-container mode. Prepare the demo directory once;
+subsequent launches only need `docker compose ... up -d`. The server dashboard is at
+`http://localhost:8080`, with individual POS dashboards on ports 8081–8083. Each POS
+has its own data and persistent ledger. The Comparison page presents the measured
+algorithm and load results alongside the existing federated privacy experiments.
+The final model is converted to ONNX and verified before each client's deployment
+acknowledgement. Physical edge hardware remains deferred.
 
 ## Quick start on Windows
 
@@ -166,7 +190,7 @@ Full evidence: [comparison JSON](reports/software_comparison.json), [software va
 
 ## Testing and recovery
 
-Latest recorded validation of the synchronization fixes: **23 automated tests passed**, React production build passed, and Python dependency checks passed. Real-process tests verified:
+Latest semester validation: **28 automated tests passed**, React production build passed, and Python dependency checks passed. The Docker demonstration also passed plain, secure and DP training with consistent ONNX predictions across three POS clients, client restart recovery, and bounded dropout failure. See [semester validation](reports/semester_validation.md). Earlier real-process tests verified:
 
 - Plain, secure, and DP dashboard-runtime training, final-model delivery, and local inference.
 - Flower deployment with two clients contributing to all six exchanges for three trees.
@@ -197,12 +221,12 @@ See the [merged-main validation record](reports/merged_main_validation.md) and [
 |---|---|---|
 | 1. Dataset preparation | Implemented on the supplied research dataset | Independent real-world provenance/collection not established |
 | 2. Centralized baseline | Implemented and evaluated | Real-bank validation outside current evidence |
-| 3. Lightweight edge model | Compact model and local inference implemented | Raspberry Pi/Jetson deployment and latency |
-| 4. Federated environment | Independent client processes tested | Physical three-device LAN run |
+| 3. Lightweight edge model | ONNX export, parity verification and local ONNX Runtime inference | Raspberry Pi/Jetson deployment and latency |
+| 4. Federated environment | Flower server with three Docker POS clients tested | Physical three-device LAN run |
 | 5. Aggregation and comparison | Implemented and evaluated | Wider experiments as needed |
 | 6. Secure aggregation and DP | Research mechanisms and accounting tested | Security assumptions and numerical limitations remain |
 | 7. Smart POS integration | Integrated software prototype | Physical POS, peripherals, and hardware integration |
-| 8. System evaluation | Local metrics, latency, communication, privacy and synthetic scaling | Device-specific and physical-network evaluation |
+| 8. System evaluation | Different algorithm comparison, local latency/load/CPU/RAM, communication, privacy and synthetic scaling | Device-specific and physical-network evaluation |
 
 The eight objectives are **not all fully accepted**. If the academic specification mandates a GNN specifically, that modeling requirement is also outstanding. See [objective details](docs/objectives_status.md).
 

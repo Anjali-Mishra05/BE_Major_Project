@@ -41,6 +41,7 @@ class Coordinator:
         self.job = None
         self.replies = {}
         self.cancelled = False
+        self.training_thread = None
         self.state = {'status': 'idle', 'events': [], 'history': [], 'clients': {}, 'run_id': None}
         self.model = None
         # A crashed coordinator never silently resumes with reused privacy queries.
@@ -79,7 +80,8 @@ class Coordinator:
                 'upload_bytes': 0, 'download_bytes': 0, 'started': time.time(), 'received': [],
                 'privacy': {'epsilon': 0, 'delta': 1e-6, 'scope': 'record add/remove; per run'}}
             self.event('start', 'All clients connected. Training started.')
-            threading.Thread(target=self.train, daemon=True).start()
+            self.training_thread = threading.Thread(target=self.train, daemon=True)
+            self.training_thread.start()
             return self.state['run_id']
 
     def exchange(self, job, timeout):
@@ -252,6 +254,11 @@ def create_app(coordinator):
     @app.get('/api/comparison')
     def comparison():
         path = ROOT / 'reports/software_comparison.json'
+        return json.loads(path.read_text()) if path.exists() else {}
+
+    @app.get('/api/benchmarks')
+    def benchmarks():
+        path = ROOT / 'reports/algorithm_benchmarks.json'
         return json.loads(path.read_text()) if path.exists() else {}
 
     dist = ROOT / 'dashboard/dist'

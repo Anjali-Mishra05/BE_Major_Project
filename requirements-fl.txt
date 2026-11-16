@@ -11,7 +11,7 @@
 # Deployment Runtime (SuperLink + SuperNode), which is also what the 3-device setup runs.
 # Versions of numpy/pandas/scikit-learn are left unpinned so this file cannot silently
 # downgrade the Phase I environment.
-flwr>=1.39.0,<2.0.0
+flwr==1.39.0
 numpy
 pandas
 scikit-learn

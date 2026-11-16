@@ -1,0 +1,7 @@
+{
+  "transport": "Flower gRPC, three child processes",
+  "restart_mid_run": "passed; final model acknowledged by both clients",
+  "dropout": "passed; bounded failure without partial aggregation",
+  "recovered_rounds": 5,
+  "dropout_error": "Round deadline exceeded; missing ['client-1']. No partial aggregate used."
+}

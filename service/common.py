@@ -2,6 +2,8 @@ import json
 import math
 import os
 import sys
+import tempfile
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -36,6 +38,24 @@ def forest_from(blob):
 def atomic_json(path, value):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix('.tmp')
-    tmp.write_text(json.dumps(clean(value), allow_nan=False, indent=2), encoding='utf-8')
-    tmp.replace(path)
+    payload = json.dumps(clean(value), allow_nan=False, indent=2)
+    fd, name = tempfile.mkstemp(prefix=path.name + '.', suffix='.tmp', dir=path.parent)
+    tmp = Path(name)
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as stream:
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        # Windows antivirus/indexers can briefly open a file without delete sharing.
+        # Retry only permission failures, with a bounded deadline; never truncate the
+        # previous committed checkpoint or silently swallow a persistent failure.
+        for attempt in range(8):
+            try:
+                tmp.replace(path)
+                break
+            except PermissionError:
+                if attempt == 7:
+                    raise
+                time.sleep(min(.02 * 2**attempt, .25))
+    finally:
+        tmp.unlink(missing_ok=True)

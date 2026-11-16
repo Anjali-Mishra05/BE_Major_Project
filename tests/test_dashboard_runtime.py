@@ -34,10 +34,19 @@ class RuntimeTests(unittest.TestCase):
             self.workers.append(Worker(cfg, self.schema_path))
         creds = json.loads((self.root/'keys/server.json').read_text())
         self.c = Coordinator(creds, self.root/'server', self.schema_path, self.root/'0.csv')
+        self.addCleanup(self.stop_coordinator)
         self.api = TestClient(create_app(self.c))
         for w in self.workers:
             r = self.api.post(f'/api/clients/{w.config["id"]}/poll', headers={'X-Token':w.config['token']}, json={'schema_hash':w.schema_hash, **w.state})
             self.assertEqual(r.status_code,200)
+
+    def stop_coordinator(self):
+        with self.c.cv:
+            self.c.cancelled = True
+            self.c.cv.notify_all()
+        if self.c.training_thread:
+            self.c.training_thread.join(timeout=10)
+            self.assertFalse(self.c.training_thread.is_alive())
 
     def drive(self, mode='secure', duplicate=False):
         self.c.start(RunConfig(trees=2, depth=2, min_child_samples=1, mode=mode, sigma=8, timeout=3).model_dump())
@@ -57,8 +66,11 @@ class RuntimeTests(unittest.TestCase):
                                 if self.c.job and self.c.job['query_id']==job['query_id']:
                                     self.c.submit(w.config['id'],response)
             time.sleep(.01)
-        self.assertEqual(self.c.state['status'],'completed',self.c.state)
-        return self.c.model
+        # Completion is published under the coordinator lock, together with the
+        # final report. Wait for that write before temporary-directory cleanup.
+        with self.c.cv:
+            self.assertEqual(self.c.state['status'],'completed',self.c.state)
+            return self.c.model
 
     def test_secure_matches_plain_and_deploys_everywhere(self):
         plain=self.drive('plain')
@@ -71,7 +83,17 @@ class RuntimeTests(unittest.TestCase):
             api=TestClient(client_app(w))
             r=api.post('/api/predict',json={'rows':[{'x':1}]})
             self.assertEqual(r.status_code,200)
+            self.assertEqual(r.json()['engine'],'ONNX Runtime CPU')
             self.assertGreater(r.json()['risk'][0],.5)
+
+    def test_installed_version_survives_next_training_round(self):
+        self.drive('plain')
+        worker=self.workers[0]
+        worker.compute(self.job())
+        local=TestClient(client_app(worker)).get('/api/local').json()
+        self.assertEqual(local['model_trees'],2)
+        self.assertEqual(local['trees'],0)
+        self.assertTrue(local['model_ready'])
 
     def job(self):
         return clean({'op':'hist','query_id':'run:0:0','run_id':'run',

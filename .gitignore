@@ -40,6 +40,19 @@ credentials/
 *.sqlite3-shm
 *.tmp
 *.bak
+*.onnx
+# Generated numeric arrays, serialized experiments and large packaging outputs
+*.npy
+*.npz
+*.joblib
+*.pkl
+*.pickle
+*.tar
+*.tar.gz
+*.zip
+*.7z
+*.mp4
+*.webm
 
 # Jupyter
 .ipynb_checkpoints/
@@ -64,6 +77,7 @@ models/fl/global_tree_*.json
 
 # Newly generated processed datasets; previously tracked files stay tracked.
 data/processed/
+data/raw/
 
 # Tracked deliberately, not ignored:
 #   models/          saved models behind the reported metrics

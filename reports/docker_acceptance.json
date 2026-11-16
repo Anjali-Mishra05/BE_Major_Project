@@ -1,0 +1,35 @@
+{
+  "transport": "Flower gRPC, Docker server + private POS containers",
+  "clients": 3,
+  "runs": [
+    {
+      "mode": "plain",
+      "status": "completed",
+      "rounds": 9,
+      "model_hash": "b713611f7824d91ac9a06763e59419b05d7e19f44d3b0e40731b588eef8051d8",
+      "all_pos_onnx_predictions_match": true,
+      "restart_mid_run": false,
+      "seconds": 23.27504062652588
+    },
+    {
+      "mode": "secure",
+      "status": "completed",
+      "rounds": 9,
+      "model_hash": "f2cb77299d83aa92be146888abc9a711c4381b6785baf56850f380fb9cfb08b2",
+      "all_pos_onnx_predictions_match": true,
+      "restart_mid_run": true,
+      "seconds": 31.513192415237427
+    },
+    {
+      "mode": "dp",
+      "status": "completed",
+      "rounds": 9,
+      "model_hash": "f930b9ebad1ab19f306f1ac474bf702ef5deb25757c937a910a02841d3146e9f",
+      "all_pos_onnx_predictions_match": true,
+      "restart_mid_run": false,
+      "seconds": 17.715627193450928
+    }
+  ],
+  "checked_at": "2026-11-16T17:34:03+0530",
+  "dropout": "Round deadline exceeded; missing ['client-0']. No partial aggregate used."
+}

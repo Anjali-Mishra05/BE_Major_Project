@@ -1,0 +1,34 @@
+{
+  "transport": "Flower gRPC, Docker server + private POS containers",
+  "clients": 3,
+  "runs": [
+    {
+      "mode": "plain",
+      "status": "completed",
+      "rounds": 9,
+      "model_hash": "fdebbece6fce028f31d3cef03d5b91e0b5ecd788c71d05aba3decebfbd2e63ba",
+      "all_pos_onnx_predictions_match": true,
+      "restart_mid_run": false,
+      "seconds": 17.486029148101807
+    },
+    {
+      "mode": "secure",
+      "status": "completed",
+      "rounds": 9,
+      "model_hash": "f2cb77299d83aa92be146888abc9a711c4381b6785baf56850f380fb9cfb08b2",
+      "all_pos_onnx_predictions_match": true,
+      "restart_mid_run": false,
+      "seconds": 6.573658466339111
+    },
+    {
+      "mode": "dp",
+      "status": "completed",
+      "rounds": 9,
+      "model_hash": "4c81855a8ea71d8ec79208bcb45a85e1074a6b8ebc79f53dea442db9f59e734a",
+      "all_pos_onnx_predictions_match": true,
+      "restart_mid_run": false,
+      "seconds": 16.267426252365112
+    }
+  ],
+  "checked_at": "2026-11-16T17:41:43+0530"
+}

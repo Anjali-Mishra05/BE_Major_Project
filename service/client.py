@@ -36,9 +36,20 @@ class Worker:
                       'trees': 0, 'rows': self.shard.n, 'epsilon': self.spent(), 'error': None}
         self.stop = threading.Event()
         self.model = None
+        self.onnx = None
         if (self.out / 'model.json').exists():
             self.model = forest_from(json.loads((self.out / 'model.json').read_text()))
             self.state['trees'] = len(self.model.trees)
+            self.install_onnx(self.model)
+
+    def install_onnx(self, model):
+        from .onnx_model import export_forest, session, predict
+        runtime = session(export_forest(model, self.out / 'model.onnx'))
+        sample = self.shard.binned[:128]
+        if not np.allclose(predict(runtime, sample), model.predict_proba(sample), atol=2e-6):
+            raise ValueError('ONNX/native prediction parity failed')
+        self.onnx = runtime
+        self.state['inference_engine'] = 'ONNX Runtime CPU'
 
     def spent(self):
         with closing(sqlite3.connect(self.db)) as db:
@@ -66,6 +77,7 @@ class Worker:
                 model_hash = hashlib.sha256(json.dumps(job['model'], sort_keys=True).encode()).hexdigest()
                 if model_hash != job['model_hash']:
                     raise ValueError('Final model checksum mismatch')
+                self.install_onnx(model)
                 atomic_json(self.out / 'model.json', job['model'])
                 self.model = model
                 self.state.update(stage='model ready', trees=len(model.trees))
@@ -148,6 +160,7 @@ def create_app(worker):
     @app.get('/api/local')
     def local():
         return clean({**worker.state, 'features': worker.schema['features'],
+                     'model_trees': len(worker.model.trees) if worker.model else 0,
                      'model_ready': worker.model is not None, 'privacy_limit': worker.config.get('max_epsilon', 20)})
 
     @app.post('/api/predict')
@@ -163,9 +176,11 @@ def create_app(worker):
             if not np.isfinite(frame.to_numpy(dtype=float)).all():
                 raise ValueError('All features must be finite numbers')
             start = time.perf_counter()
-            proba = worker.model.predict_proba(bins.binned_matrix(frame, worker.schema))
+            from .onnx_model import predict as onnx_predict
+            proba = onnx_predict(worker.onnx, bins.binned_matrix(frame, worker.schema))
             return {'risk': proba.tolist(), 'flagged': (proba >= 0.5).tolist(),
-                    'latency_ms': (time.perf_counter()-start)*1000, 'trees': len(worker.model.trees)}
+                    'latency_ms': (time.perf_counter()-start)*1000, 'trees': len(worker.model.trees),
+                    'engine': 'ONNX Runtime CPU'}
         except (ValueError, KeyError, TypeError) as exc:
             raise HTTPException(422, str(exc))
 

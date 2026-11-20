@@ -191,6 +191,39 @@ def create_app(worker):
         df = pd.read_csv(worker.config['data'], nrows=1)
         return clean(df[worker.schema['features']].iloc[0].to_dict())
 
+    rows_cache = {}
+
+    @app.get('/api/row')
+    def row(n: int | None = None, kind: str = 'any'):
+        """Return one local transaction by 1-based row number, or a random one (any/fraud/legit).
+
+        Served only by the client's loopback UI, never uploaded to the coordinator.
+        """
+        import random
+        import pandas as pd
+        if 'df' not in rows_cache:
+            rows_cache['df'] = pd.read_csv(worker.config['data'])
+        df = rows_cache['df']
+        total = len(df)
+        label = df['fraud_flag'] if 'fraud_flag' in df.columns else None
+        if n is None:
+            pool = np.arange(total)
+            if kind in ('fraud', 'legit'):
+                if label is None:
+                    raise HTTPException(422, 'This device has no labels to filter by')
+                pool = np.flatnonzero(label.to_numpy() == (1 if kind == 'fraud' else 0))
+            elif kind != 'any':
+                raise HTTPException(422, "kind must be 'any', 'fraud' or 'legit'")
+            if len(pool) == 0:
+                raise HTTPException(404, 'No matching rows on this device')
+            n = int(random.choice(pool.tolist())) + 1
+        if not 1 <= n <= total:
+            raise HTTPException(422, f'Row number must be between 1 and {total}')
+        record = df.iloc[n - 1]
+        return {'row': n, 'total': total,
+                'actual_fraud': int(record['fraud_flag']) if label is not None else None,
+                'features': clean(record[worker.schema['features']].to_dict())}
+
     dist = ROOT / 'dashboard/dist'
     if dist.exists():
         app.mount('/', StaticFiles(directory=dist, html=True), name='dashboard')
